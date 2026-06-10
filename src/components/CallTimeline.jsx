@@ -17,6 +17,18 @@ const SENTIMENT_LABELS = {
 
 const DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'%3E%3C/path%3E%3Ccircle cx='12' cy='7' r='4'%3E%3C/circle%3E%3C/svg%3E";
 
+// 부정 퍼센테이지는 높을수록 나쁨 → 차트용 웰빙 점수로 변환 (높을수록 좋음)
+function toWellbeingScore(sentiment, score) {
+  if (score == null) return 50;
+  switch (sentiment) {
+    case 'POSITIVE': return score;
+    case 'NEGATIVE': return 100 - score;
+    case 'NEUTRAL':  return 50;
+    case 'MIXED':    return 50;
+    default:         return score;
+  }
+}
+
 function SentimentLineChart({ history, isLoading, error }) {
   const data = history.filter(r => r.status === '응답').slice(0, 7).reverse();
 
@@ -35,7 +47,7 @@ function SentimentLineChart({ history, isLoading, error }) {
   const W = 560, H = 150, PL = 28, PR = 28, PT = 24, PB = 10;
   const cW = W - PL - PR, cH = H - PT - PB;
 
-  const scores = data.map(d => d.sentimentScore ?? 50);
+  const scores = data.map(d => toWellbeingScore(d.sentiment, d.sentimentScore));
   const latest = scores[scores.length - 1];
   const trendDiff = latest - scores[scores.length - 2];
   const zc = s => s >= 70 ? '#10b981' : s >= 40 ? '#f59e0b' : '#ef4444';
@@ -62,7 +74,8 @@ function SentimentLineChart({ history, isLoading, error }) {
           <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-light)', marginTop: '0.1rem' }}>최근 {data.length}회 통화</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.375rem' }}>
-          <span style={{ fontSize: '1.75rem', fontWeight: 900, color: lineColor, lineHeight: 1 }}>{latest}</span>
+          <span style={{ fontSize: '1.75rem', fontWeight: 900, color: zc(latest), lineHeight: 1 }}>{latest}</span>
+          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-light)' }}>점</span>
           <span style={{ fontSize: '0.875rem', fontWeight: 700, color: trendDiff >= 0 ? '#10b981' : '#ef4444' }}>
             {trendDiff >= 0 ? '↑' : '↓'}{Math.abs(trendDiff)}
           </span>
@@ -318,8 +331,8 @@ export default function CallTimeline({ history, isLoading, recipientName, onClos
                         {!isUnanswered && (
                           <>
                             <span className={`badge ${record.riskLevel === '위험' ? 'badge-danger' : record.riskLevel === '주의' ? 'badge-warning' : 'badge-success'}`} style={{ padding: '0.25rem 0.75rem', fontWeight: 800 }}>{record.riskLevel}</span>
-                            {sentiment && <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '0.25rem 0.75rem', borderRadius: '99px', color: sentiment.color, backgroundColor: sentiment.bg, border: `1px solid ${sentiment.color}` }}>{sentiment.label} ({record.sentimentScore}점)</span>}
-                            {scoreOnly && <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '0.25rem 0.75rem', borderRadius: '99px', color: 'var(--color-text-muted)', backgroundColor: 'var(--color-bg-subtle)', border: '1px solid var(--color-border-dark)' }}>{record.sentimentScore}점</span>}
+                            {sentiment && <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '0.25rem 0.75rem', borderRadius: '99px', color: sentiment.color, backgroundColor: sentiment.bg, border: `1px solid ${sentiment.color}` }}>{sentiment.label} {record.sentimentScore}%</span>}
+                            {scoreOnly && <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '0.25rem 0.75rem', borderRadius: '99px', color: 'var(--color-text-muted)', backgroundColor: 'var(--color-bg-subtle)', border: '1px solid var(--color-border-dark)' }}>{record.sentimentScore}%</span>}
                           </>
                         )}
                       </div>
